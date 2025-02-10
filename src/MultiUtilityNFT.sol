@@ -5,6 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
+error ZeroAddress();
+error InvalidTimestamp();
+
 contract MultiUtilityNFT is ERC721 {
     using SafeERC20 for IERC20;
 
@@ -36,6 +39,10 @@ contract MultiUtilityNFT is ERC721 {
         uint256 _phase2EndTimestamp,
         uint256 _phase3EndTimestamp
     ) ERC721(name, symbol) {
+        if (address(_paymentToken) == address(0)) revert ZeroAddress();
+        if (_phase1EndTimestamp <= block.timestamp) revert InvalidTimestamp();
+        if (_phase2EndTimestamp <= _phase1EndTimestamp) revert InvalidTimestamp();
+        if (_phase3EndTimestamp <= _phase2EndTimestamp) revert InvalidTimestamp();
         paymentToken = _paymentToken;
         discountPrice = _discountPrice;
         fullPrice = _fullPrice;
