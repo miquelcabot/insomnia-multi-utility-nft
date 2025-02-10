@@ -4,11 +4,16 @@ pragma solidity 0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {MerkleProof} from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 error ZeroAddress();
 error InvalidTimestamp();
+error InvalidPhase();
+error InvalidProof();
+error AlreadyClaimed();
 
-contract MultiUtilityNFT is ERC721 {
+contract MultiUtilityNFT is ERC721, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum Phase {
@@ -26,6 +31,11 @@ contract MultiUtilityNFT is ERC721 {
     uint256 public immutable phase1EndTimestamp;
     uint256 public immutable phase2EndTimestamp;
     uint256 public immutable phase3EndTimestamp;
+
+    mapping(address => bool) public phase1Claimed;
+    mapping(address => bool) public phase2Claimed;
+
+    uint256 internal nextTokenId;
 
     constructor(
         string memory name,
@@ -53,6 +63,20 @@ contract MultiUtilityNFT is ERC721 {
         phase3EndTimestamp = _phase3EndTimestamp;
     }
 
+    function mintPhase1(bytes32[] calldata proof) external nonReentrant {
+        if (getCurrentPhase() != Phase.Phase1) revert InvalidPhase();
+        if (phase1Claimed[msg.sender]) revert AlreadyClaimed();
+
+        _validateProof(msg.sender, phase1MerkleRoot, proof);
+
+        uint256 tokenId = nextTokenId;
+        nextTokenId++;
+        _safeMint(msg.sender, tokenId);
+        phase1Claimed[msg.sender] = true;
+
+        emit Minted(msg.sender, tokenId, Phase.Phase1);
+    }
+
     function getCurrentPhase() public view returns (Phase) {
         uint256 currentTimestamp = block.timestamp;
         if (currentTimestamp <= phase1EndTimestamp) {
@@ -65,4 +89,13 @@ contract MultiUtilityNFT is ERC721 {
             return Phase.Finished;
         }
     }
+
+    function _validateProof(address account, bytes32 merkleRoot, bytes32[] calldata proof) internal pure {
+        bytes32 leaf = keccak256(abi.encodePacked(account));
+        if (!MerkleProof.verify(proof, merkleRoot, leaf)) {
+            revert InvalidProof();
+        }
+    }
+
+    event Minted(address indexed account, uint256 tokenId, Phase phase);
 }
