@@ -21,6 +21,7 @@ contract MultiUtilityNFTTest is Test {
         multiUtilityNFT = new MultiUtilityNFT(
             "MultiUtilityNFT",
             "MUN",
+            address(this),
             paymentToken,
             0,
             0,

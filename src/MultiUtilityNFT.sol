@@ -4,6 +4,7 @@ pragma solidity 0.8.20;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {MerkleProof} from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -13,7 +14,7 @@ error InvalidPhase();
 error InvalidProof();
 error AlreadyClaimed();
 
-contract MultiUtilityNFT is ERC721, ReentrancyGuard {
+contract MultiUtilityNFT is ERC721, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum Phase {
@@ -40,6 +41,7 @@ contract MultiUtilityNFT is ERC721, ReentrancyGuard {
     constructor(
         string memory name,
         string memory symbol,
+        address _owner,
         IERC20 _paymentToken,
         uint256 _discountPrice,
         uint256 _fullPrice,
@@ -48,7 +50,7 @@ contract MultiUtilityNFT is ERC721, ReentrancyGuard {
         uint256 _phase1EndTimestamp,
         uint256 _phase2EndTimestamp,
         uint256 _phase3EndTimestamp
-    ) ERC721(name, symbol) {
+    ) ERC721(name, symbol) Ownable(_owner) {
         if (address(_paymentToken) == address(0)) revert ZeroAddress();
         if (_phase1EndTimestamp <= block.timestamp) revert InvalidTimestamp();
         if (_phase2EndTimestamp <= _phase1EndTimestamp) revert InvalidTimestamp();
