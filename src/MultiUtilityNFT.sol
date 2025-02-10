@@ -8,6 +8,13 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract MultiUtilityNFT is ERC721 {
     using SafeERC20 for IERC20;
 
+    enum Phase {
+        Phase1,
+        Phase2,
+        Phase3,
+        Finished
+    }
+
     IERC20 public immutable paymentToken;
     uint256 public immutable discountPrice;
     uint256 public immutable fullPrice;
@@ -37,5 +44,18 @@ contract MultiUtilityNFT is ERC721 {
         phase1EndTimestamp = _phase1EndTimestamp;
         phase2EndTimestamp = _phase2EndTimestamp;
         phase3EndTimestamp = _phase3EndTimestamp;
+    }
+
+    function getCurrentPhase() public view returns (Phase) {
+        uint256 currentTimestamp = block.timestamp;
+        if (currentTimestamp <= phase1EndTimestamp) {
+            return Phase.Phase1;
+        } else if (currentTimestamp <= phase2EndTimestamp) {
+            return Phase.Phase2;
+        } else if (currentTimestamp <= phase3EndTimestamp) {
+            return Phase.Phase3;
+        } else {
+            return Phase.Finished;
+        }
     }
 }
