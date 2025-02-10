@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {MerkleProof} from "openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol";
 
 error ZeroAddress();
@@ -50,7 +51,7 @@ contract MultiUtilityNFT is ERC721, Ownable, ReentrancyGuard {
         uint256 _phase1EndTimestamp,
         uint256 _phase2EndTimestamp,
         uint256 _phase3EndTimestamp
-    ) ERC721(name, symbol) Ownable(_owner) {
+    ) ERC721(name, symbol) Ownable(_owner) EIP712("MultiUtilityNFT", "1") {
         if (address(_paymentToken) == address(0)) revert ZeroAddress();
         if (_phase1EndTimestamp <= block.timestamp) revert InvalidTimestamp();
         if (_phase2EndTimestamp <= _phase1EndTimestamp) revert InvalidTimestamp();
@@ -71,12 +72,22 @@ contract MultiUtilityNFT is ERC721, Ownable, ReentrancyGuard {
 
         _validateProof(msg.sender, phase1MerkleRoot, proof);
 
-        uint256 tokenId = nextTokenId;
-        nextTokenId++;
-        _safeMint(msg.sender, tokenId);
+        uint256 tokenId = _mintNFT(msg.sender);
         phase1Claimed[msg.sender] = true;
 
         emit Minted(msg.sender, tokenId, Phase.Phase1);
+    }
+
+    function mintPhase2(bytes32[] calldata proof) external nonReentrant {
+        if (getCurrentPhase() != Phase.Phase2) revert InvalidPhase();
+        if (phase2Claimed[msg.sender]) revert AlreadyClaimed();
+
+        _validateProof(msg.sender, phase2MerkleRoot, proof);
+
+        uint256 tokenId = _mintNFT(msg.sender);
+        phase2Claimed[msg.sender] = true;
+
+        emit Minted(msg.sender, tokenId, Phase.Phase2);
     }
 
     function getCurrentPhase() public view returns (Phase) {
@@ -90,6 +101,13 @@ contract MultiUtilityNFT is ERC721, Ownable, ReentrancyGuard {
         } else {
             return Phase.Finished;
         }
+    }
+
+    function _mintNFT(address account) internal returns (uint256) {
+        uint256 tokenId = nextTokenId;
+        nextTokenId++;
+        _safeMint(account, tokenId);
+        return tokenId;
     }
 
     function _validateProof(address account, bytes32 merkleRoot, bytes32[] calldata proof) internal pure {
