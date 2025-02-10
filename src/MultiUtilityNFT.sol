@@ -11,8 +11,11 @@ contract MultiUtilityNFT is ERC721 {
     IERC20 public immutable paymentToken;
     uint256 public immutable discountPrice;
     uint256 public immutable fullPrice;
-    bytes32 public immutable merkleRootPhase1;
-    bytes32 public immutable merkleRootPhase2;
+    bytes32 public immutable phase1MerkleRoot;
+    bytes32 public immutable phase2MerkleRoot;
+    uint256 public immutable phase1EndTimestamp;
+    uint256 public immutable phase2EndTimestamp;
+    uint256 public immutable phase3EndTimestamp;
 
     constructor(
         string memory name,
@@ -20,13 +23,19 @@ contract MultiUtilityNFT is ERC721 {
         IERC20 _paymentToken,
         uint256 _discountPrice,
         uint256 _fullPrice,
-        bytes32 _merkleRootPhase1,
-        bytes32 _merkleRootPhase2
+        bytes32 _phase1MerkleRoot,
+        bytes32 _phase2MerkleRoot,
+        uint256 _phase1EndTimestamp,
+        uint256 _phase2EndTimestamp,
+        uint256 _phase3EndTimestamp
     ) ERC721(name, symbol) {
         paymentToken = _paymentToken;
         discountPrice = _discountPrice;
         fullPrice = _fullPrice;
-        merkleRootPhase1 = _merkleRootPhase1;
-        merkleRootPhase2 = _merkleRootPhase2;
+        phase1MerkleRoot = _phase1MerkleRoot;
+        phase2MerkleRoot = _phase2MerkleRoot;
+        phase1EndTimestamp = _phase1EndTimestamp;
+        phase2EndTimestamp = _phase2EndTimestamp;
+        phase3EndTimestamp = _phase3EndTimestamp;
     }
 }

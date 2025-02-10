@@ -11,6 +11,17 @@ contract MultiUtilityNFTTest is Test {
 
     function setUp() public {
         paymentToken = new PaymentToken();
-        multiUtilityNFT = new MultiUtilityNFT("MultiUtilityNFT", "MUN", paymentToken, 0, 0, bytes32(0), bytes32(0));
+        multiUtilityNFT = new MultiUtilityNFT(
+            "MultiUtilityNFT",
+            "MUN",
+            paymentToken,
+            0,
+            0,
+            bytes32(0),
+            bytes32(0),
+            block.timestamp,
+            block.timestamp,
+            block.timestamp
+        );
     }
 }
