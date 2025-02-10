@@ -9,8 +9,24 @@ contract MultiUtilityNFT is ERC721 {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable paymentToken;
+    uint256 public immutable discountPrice;
+    uint256 public immutable fullPrice;
+    bytes32 public immutable merkleRootPhase1;
+    bytes32 public immutable merkleRootPhase2;
 
-    constructor(IERC20 _paymentToken) ERC721("MultiUtilityNFT", "MUN") {
+    constructor(
+        string memory name,
+        string memory symbol,
+        IERC20 _paymentToken,
+        uint256 _discountPrice,
+        uint256 _fullPrice,
+        bytes32 _merkleRootPhase1,
+        bytes32 _merkleRootPhase2
+    ) ERC721(name, symbol) {
         paymentToken = _paymentToken;
+        discountPrice = _discountPrice;
+        fullPrice = _fullPrice;
+        merkleRootPhase1 = _merkleRootPhase1;
+        merkleRootPhase2 = _merkleRootPhase2;
     }
 }
