@@ -8,15 +8,5 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract MultiUtilityNFT is ERC721 {
     using SafeERC20 for IERC20;
 
-    uint256 public number;
-
     constructor() ERC721("MultiUtilityNFT", "MUN") {}
-
-    function setNumber(uint256 newNumber) public {
-        number = newNumber;
-    }
-
-    function increment() public {
-        number++;
-    }
 }

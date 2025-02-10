@@ -9,16 +9,5 @@ contract MultiUtilityNFTTest is Test {
 
     function setUp() public {
         multiUtilityNFT = new MultiUtilityNFT();
-        multiUtilityNFT.setNumber(0);
-    }
-
-    function test_Increment() public {
-        multiUtilityNFT.increment();
-        assertEq(multiUtilityNFT.number(), 1);
-    }
-
-    function testFuzz_SetNumber(uint256 x) public {
-        multiUtilityNFT.setNumber(x);
-        assertEq(multiUtilityNFT.number(), x);
     }
 }
