@@ -1,8 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.20;
 
-contract MultiUtilityNFT {
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+
+contract MultiUtilityNFT is ERC721 {
+    using SafeERC20 for IERC20;
+
     uint256 public number;
+
+    constructor() ERC721("MultiUtilityNFT", "MUN") {}
 
     function setNumber(uint256 newNumber) public {
         number = newNumber;
