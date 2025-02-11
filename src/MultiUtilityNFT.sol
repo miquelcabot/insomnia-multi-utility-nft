@@ -123,7 +123,16 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
     }
 
     function _validateSignature(address account, bytes calldata signature) internal view {
-        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(keccak256("MultiUtilityNFT(address account)"), account)));
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(
+                abi.encode(
+                    keccak256("MultiUtilityNFT(uint256 chainid, address nft, address account)"),
+                    block.chainid,
+                    address(this),
+                    account
+                )
+            )
+        );
         address signer = ECDSA.recover(digest, signature);
         if (signer != owner()) {
             revert InvalidSignature();
