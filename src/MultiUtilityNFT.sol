@@ -10,6 +10,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol";
+import {Broker, Lockup, LockupLinear} from "@sablier/lockup/src/types/DataTypes.sol";
+import {ud60x18} from "prb-math/UD60x18.sol";
 
 error ZeroAddress();
 error InvalidTimestamp();
@@ -106,6 +108,26 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         uint256 tokenId = _mintNFT(msg.sender);
 
         emit Minted(msg.sender, tokenId, Phase.Phase3);
+    }
+
+    function lockMintingFundsOnSablier() external onlyOwner {
+        if (getCurrentPhase() != Phase.Finished) revert InvalidPhase();
+
+        uint256 balance = paymentToken.balanceOf(address(this));
+        Lockup.CreateWithDurations memory params = Lockup.CreateWithDurations({
+            sender: owner(),
+            recipient: owner(),
+            totalAmount: uint128(balance),
+            token: IERC20(address(paymentToken)),
+            cancelable: false,
+            transferable: true,
+            shape: "",
+            broker: Broker(address(0), ud60x18(0))
+        });
+        LockupLinear.UnlockAmounts memory unlockAmounts = LockupLinear.UnlockAmounts({start: 0, cliff: 0});
+        LockupLinear.Durations memory durations = LockupLinear.Durations({cliff: 0, total: uint40(365 days)});
+        paymentToken.safeIncreaseAllowance(address(sablierLockup), balance);
+        sablierLockup.createWithDurationsLL(params, unlockAmounts, durations);
     }
 
     function getCurrentPhase() public view returns (Phase) {
