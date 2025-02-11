@@ -71,6 +71,18 @@ contract MultiUtilityNFTTest is Test {
         assertEq(multiUtilityNFT.phase3EndTimestamp(), block.timestamp + 3 days);
     }
 
+    function testGetCurrentPhase() public {
+        uint256 currentTimestamp = block.timestamp;
+
+        assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Phase1);
+        vm.warp(currentTimestamp + 1 days + 1 seconds);
+        assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Phase2);
+        vm.warp(currentTimestamp + 2 days + 1 seconds);
+        assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Phase3);
+        vm.warp(currentTimestamp + 3 days + 1 seconds);
+        assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Finished);
+    }
+
     function computeMerkleRoot(bytes32[] memory leaves) internal pure returns (bytes32) {
         require(leaves.length > 0, "No leaves provided");
 
