@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.26;
 
 import {Test, console} from "forge-std/Test.sol";
 import {MultiUtilityNFT} from "../src/MultiUtilityNFT.sol";
@@ -22,6 +22,7 @@ contract MultiUtilityNFTTest is Test {
             "MultiUtilityNFT",
             "MUN",
             address(this),
+            address(0),
             paymentToken,
             0,
             0,

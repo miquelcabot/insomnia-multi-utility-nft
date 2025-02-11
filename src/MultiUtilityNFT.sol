@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.20;
+pragma solidity 0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -9,6 +9,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol";
 
 error ZeroAddress();
 error InvalidTimestamp();
@@ -27,6 +28,7 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         Finished
     }
 
+    ISablierLockup public immutable sablierLockup;
     IERC20 public immutable paymentToken;
     uint256 public immutable discountPrice;
     uint256 public immutable fullPrice;
@@ -45,6 +47,7 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         string memory name,
         string memory symbol,
         address _owner,
+        ISablierLockup _sablierLockup,
         IERC20 _paymentToken,
         uint256 _discountPrice,
         uint256 _fullPrice,
@@ -54,10 +57,12 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         uint256 _phase2EndTimestamp,
         uint256 _phase3EndTimestamp
     ) ERC721(name, symbol) Ownable(_owner) EIP712(name, "1") {
+        if (address(_sablierLockup) == address(0)) revert ZeroAddress();
         if (address(_paymentToken) == address(0)) revert ZeroAddress();
         if (_phase1EndTimestamp <= block.timestamp) revert InvalidTimestamp();
         if (_phase2EndTimestamp <= _phase1EndTimestamp) revert InvalidTimestamp();
         if (_phase3EndTimestamp <= _phase2EndTimestamp) revert InvalidTimestamp();
+        sablierLockup = _sablierLockup;
         paymentToken = _paymentToken;
         discountPrice = _discountPrice;
         fullPrice = _fullPrice;
