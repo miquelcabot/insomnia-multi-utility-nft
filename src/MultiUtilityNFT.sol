@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
@@ -13,6 +14,7 @@ error ZeroAddress();
 error InvalidTimestamp();
 error InvalidPhase();
 error InvalidProof();
+error InvalidSignature();
 error AlreadyClaimed();
 
 contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
@@ -78,11 +80,14 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         emit Minted(msg.sender, tokenId, Phase.Phase1);
     }
 
-    function mintPhase2(bytes32[] calldata proof) external nonReentrant {
+    function mintPhase2(bytes32[] calldata proof, bytes calldata signature) external nonReentrant {
         if (getCurrentPhase() != Phase.Phase2) revert InvalidPhase();
         if (phase2Claimed[msg.sender]) revert AlreadyClaimed();
 
         _validateProof(msg.sender, phase2MerkleRoot, proof);
+        _validateSignature(msg.sender, signature);
+
+        paymentToken.safeTransferFrom(msg.sender, address(this), discountPrice);
 
         uint256 tokenId = _mintNFT(msg.sender);
         phase2Claimed[msg.sender] = true;
@@ -114,6 +119,14 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         bytes32 leaf = keccak256(abi.encodePacked(account));
         if (!MerkleProof.verify(proof, merkleRoot, leaf)) {
             revert InvalidProof();
+        }
+    }
+
+    function _validateSignature(address account, bytes calldata signature) internal view {
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(keccak256("MultiUtilityNFT(address account)"), account)));
+        address signer = ECDSA.recover(digest, signature);
+        if (signer != owner()) {
+            revert InvalidSignature();
         }
     }
 
