@@ -44,8 +44,6 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
     uint256 internal nextTokenId;
 
     constructor(
-        string memory name,
-        string memory symbol,
         address _owner,
         ISablierLockup _sablierLockup,
         IERC20 _paymentToken,
@@ -56,7 +54,7 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         uint256 _phase1EndTimestamp,
         uint256 _phase2EndTimestamp,
         uint256 _phase3EndTimestamp
-    ) ERC721(name, symbol) Ownable(_owner) EIP712(name, "1") {
+    ) ERC721("MultiUtilityNFT", "MUN") Ownable(_owner) EIP712("MultiUtilityNFT", "1") {
         if (address(_sablierLockup) == address(0)) revert ZeroAddress();
         if (address(_paymentToken) == address(0)) revert ZeroAddress();
         if (_phase1EndTimestamp <= block.timestamp) revert InvalidTimestamp();
