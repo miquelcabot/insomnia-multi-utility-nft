@@ -80,7 +80,7 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         emit Minted(msg.sender, tokenId, Phase.Phase1);
     }
 
-    function mintPhase2(bytes32[] calldata proof, bytes calldata signature) external nonReentrant {
+    function mintPhase2(bytes calldata signature, bytes32[] calldata proof) external nonReentrant {
         if (getCurrentPhase() != Phase.Phase2) revert InvalidPhase();
         if (phase2Claimed[msg.sender]) revert AlreadyClaimed();
 
