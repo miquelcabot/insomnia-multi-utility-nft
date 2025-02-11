@@ -1,66 +1,54 @@
-## Foundry
+# Insomnia Multi-Utility NFT
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Overview
 
-Foundry consists of:
+**Insomnia Multi-Utility NFT** is a Solidity-based smart contract project designed to implement a multi-utility NFT system. The project leverages the **Foundry** framework for development, testing, and deployment.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Features
 
-## Documentation
 
-https://book.getfoundry.sh/
+
+## Installation
+
+Ensure you have Foundry installed before proceeding:
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Clone the repository and install dependencies:
+
+```bash
+git clone https://github.com/miquelcabot/insomnia-multi-utility-nft.git
+cd insomnia-multi-utility-nft
+forge install
+```
 
 ## Usage
 
-### Build
+### Compilation
 
-```shell
-$ forge build
+Compile the smart contracts:
+
+```bash
+forge build
 ```
 
-### Test
+### Running tests
 
-```shell
-$ forge test
+Execute the test suite using Foundry:
+
+```bash
+forge test
 ```
 
-### Format
+## Contract Design and Testing Approach
 
-```shell
-$ forge fmt
-```
+The contract design follows modular principles to ensure maintainability and scalability. The `MultiUtilityNFT` contract extends ERC721 while integrating additional functionalities such as mint operations and lockup mechanisms.
 
-### Gas Snapshots
+The testing strategy includes:
 
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/MultiUtilityNFT.s.sol:MultiUtilityNFTScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+- **Unit Tests**: Validate individual contract components.
+- **Integration Tests**: Ensure interactions between different contract modules function correctly.
+- **Fuzz Testing**: Randomized inputs to test edge cases and unexpected behaviors.
