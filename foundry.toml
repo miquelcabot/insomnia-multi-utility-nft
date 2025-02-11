@@ -9,7 +9,7 @@ optimizer_runs = 20_000
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "@sablier/lockup/=lib/lockup/",
-    "@prb/math/=lib/prb-math/"
+    "@prb/math/=lib/prb-math/",
     "@dmfxyz/murky/=lib/murky/"
 ]
 
