@@ -13,13 +13,6 @@ import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol"
 import {Broker, Lockup, LockupLinear} from "@sablier/lockup/src/types/DataTypes.sol";
 import {ud60x18} from "prb-math/UD60x18.sol";
 
-error ZeroAddress();
-error InvalidTimestamp();
-error InvalidPhase();
-error InvalidProof();
-error InvalidSignature();
-error AlreadyClaimed();
-
 contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -29,6 +22,17 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         Phase3,
         Finished
     }
+
+    // ----------- Error Codes -------------------------------------------------
+
+    error ZeroAddress();
+    error InvalidTimestamp();
+    error InvalidPhase();
+    error InvalidProof();
+    error InvalidSignature();
+    error AlreadyClaimed();
+
+    // ----------- State Variables ---------------------------------------------
 
     ISablierLockup public immutable sablierLockup;
     IERC20 public immutable paymentToken;
@@ -45,6 +49,21 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
 
     uint256 internal nextTokenId;
 
+    // ----------- Constructor -------------------------------------------------
+
+    /**
+     * @notice Construct a new MultiUtilityNFT
+     * @param _owner Address that will own the contract
+     * @param _sablierLockup Sablier Lockup contract
+     * @param _paymentToken ERC20 token used for payments
+     * @param _discountPrice Price for Phase 2 minting
+     * @param _fullPrice Price for Phase 3 minting
+     * @param _phase1MerkleRoot Merkle root for Phase 1 claims
+     * @param _phase2MerkleRoot Merkle root for Phase 2 claims
+     * @param _phase1EndTimestamp Phase 1 end timestamp
+     * @param _phase2EndTimestamp Phase 2 end timestamp
+     * @param _phase3EndTimestamp Phase 3 end timestamp
+     */
     constructor(
         address _owner,
         ISablierLockup _sablierLockup,
@@ -73,6 +92,12 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         phase3EndTimestamp = _phase3EndTimestamp;
     }
 
+    // ----------- Mutable Functions -------------------------------------------
+
+    /**
+     * @notice Mint a new NFT in Phase 1 for free, verified by a Merkle proof
+     * @param proof Merkle proof for the account that is minting the NFT
+     */
     function mintPhase1(bytes32[] calldata proof) external nonReentrant {
         if (getCurrentPhase() != Phase.Phase1) revert InvalidPhase();
         if (phase1Claimed[msg.sender]) revert AlreadyClaimed();
@@ -85,6 +110,11 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         emit Minted(msg.sender, tokenId, Phase.Phase1);
     }
 
+    /**
+     * @notice Mint a new NFT in Phase 2 for a discount, verified by a Merkle proof and a signature
+     * @param signature Signature from the owner
+     * @param proof Merkle proof for the account that is minting the NFT
+     */
     function mintPhase2(bytes calldata signature, bytes32[] calldata proof) external nonReentrant {
         if (getCurrentPhase() != Phase.Phase2) revert InvalidPhase();
         if (phase2Claimed[msg.sender]) revert AlreadyClaimed();
@@ -100,6 +130,9 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         emit Minted(msg.sender, tokenId, Phase.Phase2);
     }
 
+    /**
+     * @notice Mint a new NFT in Phase 3 for the full price
+     */
     function mintPhase3() external nonReentrant {
         if (getCurrentPhase() != Phase.Phase3) revert InvalidPhase();
 
@@ -110,6 +143,12 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         emit Minted(msg.sender, tokenId, Phase.Phase3);
     }
 
+    // ----------- Restricted Functions ----------------------------------------
+
+    /**
+     * @notice Lock the remaining minting fees on Sablier
+     * @dev This function can only be called by the owner
+     */
     function lockMintingFundsOnSablier() external onlyOwner {
         if (getCurrentPhase() != Phase.Finished) revert InvalidPhase();
 
@@ -130,6 +169,12 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         sablierLockup.createWithDurationsLL(params, unlockAmounts, durations);
     }
 
+    // ----------- View Functions ----------------------------------------------
+
+    /**
+     * @notice Get the current phase
+     * @return The current phase
+     */
     function getCurrentPhase() public view returns (Phase) {
         uint256 currentTimestamp = block.timestamp;
         if (currentTimestamp <= phase1EndTimestamp) {
@@ -142,6 +187,8 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
             return Phase.Finished;
         }
     }
+
+    // ----------- Internal Functions ------------------------------------------
 
     function _mintNFT(address account) internal returns (uint256) {
         uint256 tokenId = nextTokenId;
@@ -174,5 +221,13 @@ contract MultiUtilityNFT is ERC721, EIP712, Ownable, ReentrancyGuard {
         }
     }
 
+    // ----------- Events ------------------------------------------------------
+
+    /**
+     * Emitted when a new NFT is minted
+     * @param account Address that minted the NFT
+     * @param tokenId ID of the minted NFT
+     * @param phase Phase in which the NFT was minted
+     */
     event Minted(address indexed account, uint256 tokenId, Phase phase);
 }
