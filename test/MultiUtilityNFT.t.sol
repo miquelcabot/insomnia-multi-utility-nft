@@ -4,6 +4,7 @@ pragma solidity 0.8.26;
 import {Test, console, Vm} from "forge-std/Test.sol";
 import {MultiUtilityNFT} from "../src/MultiUtilityNFT.sol";
 import {PaymentToken} from "../src/PaymentToken.sol";
+import {CompleteMerkle} from "@dmfxyz/murky/src/CompleteMerkle.sol";
 import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol";
 
 contract MultiUtilityNFTTest is Test {
@@ -21,6 +22,8 @@ contract MultiUtilityNFTTest is Test {
     bytes32 public phase1MerkleRoot;
     bytes32 public phase2MerkleRoot;
 
+    CompleteMerkle merkle = new CompleteMerkle();
+
     function setUp() public {
         // Store an address for the owner and 20 users
         owner = (vm.createWallet(vm.randomUint())).addr;
@@ -33,8 +36,8 @@ contract MultiUtilityNFTTest is Test {
             phase1MerkleTreeLeaves.push(keccak256(abi.encodePacked(users[i])));
             phase2MerkleTreeLeaves.push(keccak256(abi.encodePacked(users[i + 10])));
         }
-        phase1MerkleRoot = computeMerkleRoot(phase1MerkleTreeLeaves);
-        phase2MerkleRoot = computeMerkleRoot(phase2MerkleTreeLeaves);
+        phase1MerkleRoot = merkle.getRoot(phase1MerkleTreeLeaves);
+        phase2MerkleRoot = merkle.getRoot(phase2MerkleTreeLeaves);
 
         // Deploy the contracts
         paymentToken = new PaymentToken();
@@ -83,23 +86,13 @@ contract MultiUtilityNFTTest is Test {
         assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Finished);
     }
 
-    function computeMerkleRoot(bytes32[] memory leaves) internal pure returns (bytes32) {
-        require(leaves.length > 0, "No leaves provided");
-
-        while (leaves.length > 1) {
-            uint256 newLength = (leaves.length + 1) / 2;
-            bytes32[] memory newLeaves = new bytes32[](newLength);
-
-            for (uint256 i = 0; i < newLength; i++) {
-                bytes32 left = leaves[i * 2];
-                bytes32 right = (i * 2 + 1 < leaves.length) ? leaves[i * 2 + 1] : left; // If odd, duplicate last element
-
-                newLeaves[i] = keccak256(abi.encodePacked(left, right));
-            }
-
-            leaves = newLeaves;
+    function testMintPhase1() public {
+        // Mint NFTs for the first 10 users
+        for (uint256 i = 0; i < 10; i++) {
+            assert(!multiUtilityNFT.phase1Claimed(users[i]));
+            vm.prank(users[i]);
+            multiUtilityNFT.mintPhase1(merkle.getProof(phase1MerkleTreeLeaves, i));
+            assert(multiUtilityNFT.phase1Claimed(users[i]));
         }
-
-        return leaves[0]; // The Merkle root
     }
 }
