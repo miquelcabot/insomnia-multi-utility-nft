@@ -312,10 +312,21 @@ contract MultiUtilityNFTTest is Test {
         // Warp to the end of the third phase
         vm.warp(block.timestamp + 3 days + 1 seconds);
 
+        // Lock the funds on Sablier
+        vm.recordLogs();
         vm.startPrank(ownerAddress);
         uint256 balanceBefore = paymentToken.balanceOf(address(sablierLockup));
         multiUtilityNFT.lockMintingFundsOnSablier();
         assertEq(paymentToken.balanceOf(address(sablierLockup)), balanceBefore + 10 * FULL_PRICE);
+
+        // Get the stream id from the logs
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        (uint256 streamId,) = abi.decode(entries[4].data, (uint256, uint256));
+
+        // Calculate the unlockable amount
+        vm.warp(block.timestamp + 400 days + 1 seconds);
+        uint256 withdrawable = sablierLockup.withdrawableAmountOf(streamId);
+        assertEq(withdrawable, 500000 ether);
         vm.stopPrank();
     }
 
