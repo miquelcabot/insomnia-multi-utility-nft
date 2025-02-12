@@ -26,6 +26,7 @@ contract MultiUtilityNFTTest is Test {
     bytes32 phase2MerkleRoot;
 
     CompleteMerkle merkle = new CompleteMerkle();
+    ISablierLockup sablierLockup = ISablierLockup(0x7C01AA3783577E15fD7e272443D44B92d5b21056);
 
     function setUp() public {
         // Store an address for the owner and users
@@ -48,7 +49,7 @@ contract MultiUtilityNFTTest is Test {
         paymentToken = new PaymentToken();
         multiUtilityNFT = new MultiUtilityNFT(
             ownerAddress,
-            ISablierLockup(address(1)),
+            sablierLockup,
             paymentToken,
             DISCOUNT_PRICE,
             FULL_PRICE,
@@ -69,7 +70,7 @@ contract MultiUtilityNFTTest is Test {
 
     function testConstructorParameters() public view {
         assertEq(multiUtilityNFT.owner(), ownerAddress);
-        assertEq(address(multiUtilityNFT.sablierLockup()), address(1));
+        assertEq(address(multiUtilityNFT.sablierLockup()), address(sablierLockup));
         assertEq(address(multiUtilityNFT.paymentToken()), address(paymentToken));
         assertEq(multiUtilityNFT.discountPrice(), DISCOUNT_PRICE);
         assertEq(multiUtilityNFT.fullPrice(), FULL_PRICE);
@@ -91,6 +92,8 @@ contract MultiUtilityNFTTest is Test {
         vm.warp(currentTimestamp + 3 days + 1 seconds);
         assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Finished);
     }
+
+    // ----------- Phase 1 Tests -----------------------------------------------
 
     function testMintPhase1Ok() public {
         for (uint256 i = 0; i < 10; i++) {
@@ -144,6 +147,8 @@ contract MultiUtilityNFTTest is Test {
             vm.stopPrank();
         }
     }
+
+    // ----------- Phase 2 Tests -----------------------------------------------
 
     function testMintPhase2Ok() public {
         // Warp to the second phase
@@ -236,6 +241,8 @@ contract MultiUtilityNFTTest is Test {
         }
     }
 
+    // ----------- Phase 3 Tests -----------------------------------------------
+
     function testMintPhase3Ok() public {
         // Warp to the third phase
         vm.warp(block.timestamp + 2 days + 1 seconds);
@@ -266,6 +273,28 @@ contract MultiUtilityNFTTest is Test {
             multiUtilityNFT.mintPhase3();
             vm.stopPrank();
         }
+    }
+
+    // ----------- Test Sablier Lockup -----------------------------------------
+
+    function testLockMintingFundsOnSablierNonOwner() public {
+        // Warp to the end of the third phase
+        vm.warp(block.timestamp + 3 days + 1 seconds);
+
+        vm.startPrank(usersPhase1[0]);
+        vm.expectRevert();
+        multiUtilityNFT.lockMintingFundsOnSablier();
+        vm.stopPrank();
+    }
+
+    function testLockMintingFundsOnSablierInvalidPhase() public {
+        // Warp to before of the end of the third phase
+        vm.warp(block.timestamp + 3 days - 1 seconds);
+
+        vm.startPrank(ownerAddress);
+        vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
+        multiUtilityNFT.lockMintingFundsOnSablier();
+        vm.stopPrank();
     }
 
     // ----------- Helper Functions --------------------------------------------
