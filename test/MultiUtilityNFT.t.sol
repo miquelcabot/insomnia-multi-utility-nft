@@ -153,6 +153,7 @@ contract MultiUtilityNFTTest is Test {
             vm.startPrank(usersPhase2[i]);
             assert(!multiUtilityNFT.phase2Claimed(usersPhase2[i]));
             uint256 balance = multiUtilityNFT.balanceOf(usersPhase2[i]);
+            uint256 balanceNftBefore = paymentToken.balanceOf(address(multiUtilityNFT));
 
             paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
 
@@ -161,6 +162,7 @@ contract MultiUtilityNFTTest is Test {
             multiUtilityNFT.mintPhase2(signature, proof);
             assert(multiUtilityNFT.phase2Claimed(usersPhase2[i]));
             assertEq(multiUtilityNFT.balanceOf(usersPhase2[i]), balance + 1);
+            assertEq(paymentToken.balanceOf(address(multiUtilityNFT)), balanceNftBefore + DISCOUNT_PRICE);
             vm.stopPrank();
         }
     }
@@ -233,6 +235,40 @@ contract MultiUtilityNFTTest is Test {
             vm.stopPrank();
         }
     }
+
+    function testMintPhase3Ok() public {
+        // Warp to the third phase
+        vm.warp(block.timestamp + 2 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase1[i]);
+            uint256 balance = multiUtilityNFT.balanceOf(usersPhase1[i]);
+            uint256 balanceNftBefore = paymentToken.balanceOf(address(multiUtilityNFT));
+
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.fullPrice());
+
+            multiUtilityNFT.mintPhase3();
+            assertEq(multiUtilityNFT.balanceOf(usersPhase1[i]), balance + 1);
+            assertEq(paymentToken.balanceOf(address(multiUtilityNFT)), balanceNftBefore + FULL_PRICE);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase3InvalidPhase() public {
+        // Warp to the end of the third phase
+        vm.warp(block.timestamp + 3 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase1[i]);
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.fullPrice());
+
+            vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
+            multiUtilityNFT.mintPhase3();
+            vm.stopPrank();
+        }
+    }
+
+    // ----------- Helper Functions --------------------------------------------
 
     function generateSignature(address account) public view returns (bytes memory) {
         // Generate the signature
