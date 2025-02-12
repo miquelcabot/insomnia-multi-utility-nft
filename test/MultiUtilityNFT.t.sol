@@ -218,6 +218,22 @@ contract MultiUtilityNFTTest is Test {
         }
     }
 
+    function testMintPhase2InvalidSignature() public {
+        // Warp to the second phase
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase2[i]);
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
+            bytes memory signature = generateSignature(usersPhase1[i]);
+            bytes32[] memory proof = merkle.getProof(phase2MerkleTreeLeaves, i);
+
+            vm.expectRevert(MultiUtilityNFT.InvalidSignature.selector);
+            multiUtilityNFT.mintPhase2(signature, proof);
+            vm.stopPrank();
+        }
+    }
+
     function generateSignature(address account) public view returns (bytes memory) {
         // Generate the signature
         bytes32 hash = keccak256(
