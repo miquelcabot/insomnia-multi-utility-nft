@@ -9,6 +9,8 @@ import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol"
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract MultiUtilityNFTTest is Test {
+    string constant RPC_MAINNET = "https://ethereum-rpc.publicnode.com";
+
     uint256 constant DISCOUNT_PRICE = 1 ether;
     uint256 constant FULL_PRICE = 2 ether;
     uint256 constant INITIAL_SUPPLY = 100 ether;
@@ -25,10 +27,16 @@ contract MultiUtilityNFTTest is Test {
     bytes32 phase1MerkleRoot;
     bytes32 phase2MerkleRoot;
 
-    CompleteMerkle merkle = new CompleteMerkle();
+    CompleteMerkle merkle;
     ISablierLockup sablierLockup = ISablierLockup(0x7C01AA3783577E15fD7e272443D44B92d5b21056);
 
     function setUp() public {
+        // Create a fork of the mainnet
+        uint256 forkId = vm.createSelectFork(RPC_MAINNET);
+        vm.selectFork(forkId);
+
+        merkle  = new CompleteMerkle();
+
         // Store an address for the owner and users
         owner = vm.createWallet(vm.randomUint());
         ownerAddress = owner.addr;
@@ -294,6 +302,20 @@ contract MultiUtilityNFTTest is Test {
         vm.startPrank(ownerAddress);
         vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
         multiUtilityNFT.lockMintingFundsOnSablier();
+        vm.stopPrank();
+    }
+
+    function testLockMintingFundsOnSablierOk() public {
+        // We need to mint some NFTs to be able to lock the funds
+        testMintPhase3Ok();
+
+        // Warp to the end of the third phase
+        vm.warp(block.timestamp + 3 days + 1 seconds);
+
+        vm.startPrank(ownerAddress);
+        uint256 balanceBefore = paymentToken.balanceOf(address(sablierLockup));
+        multiUtilityNFT.lockMintingFundsOnSablier();
+        assertEq(paymentToken.balanceOf(address(sablierLockup)), balanceBefore + 10 * FULL_PRICE);
         vm.stopPrank();
     }
 
