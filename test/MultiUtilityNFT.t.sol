@@ -9,33 +9,37 @@ import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol"
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract MultiUtilityNFTTest is Test {
-    uint256 public constant DISCOUNT_PRICE = 1 ether;
-    uint256 public constant FULL_PRICE = 2 ether;
-    uint256 public constant INITIAL_SUPPLY = 100 ether;
+    uint256 constant DISCOUNT_PRICE = 1 ether;
+    uint256 constant FULL_PRICE = 2 ether;
+    uint256 constant INITIAL_SUPPLY = 100 ether;
 
-    MultiUtilityNFT public multiUtilityNFT;
-    PaymentToken public paymentToken;
-    address public owner;
-    address[] public users;
+    MultiUtilityNFT multiUtilityNFT;
+    PaymentToken paymentToken;
+    Vm.Wallet owner;
+    address ownerAddress;
+    address[] usersPhase1;
+    address[] usersPhase2;
 
-    bytes32[] public phase1MerkleTreeLeaves;
-    bytes32[] public phase2MerkleTreeLeaves;
-    bytes32 public phase1MerkleRoot;
-    bytes32 public phase2MerkleRoot;
+    bytes32[] phase1MerkleTreeLeaves;
+    bytes32[] phase2MerkleTreeLeaves;
+    bytes32 phase1MerkleRoot;
+    bytes32 phase2MerkleRoot;
 
     CompleteMerkle merkle = new CompleteMerkle();
 
     function setUp() public {
-        // Store an address for the owner and 20 users
-        owner = (vm.createWallet(vm.randomUint())).addr;
-        for (uint256 i = 0; i < 20; i++) {
-            users.push((vm.createWallet(vm.randomUint())).addr);
+        // Store an address for the owner and users
+        owner = vm.createWallet(vm.randomUint());
+        ownerAddress = owner.addr;
+        for (uint256 i = 0; i < 10; i++) {
+            usersPhase1.push((vm.createWallet(vm.randomUint())).addr);
+            usersPhase2.push((vm.createWallet(vm.randomUint())).addr);
         }
 
         // Generate two merkle trees for the two phases
         for (uint256 i = 0; i < 10; i++) {
-            phase1MerkleTreeLeaves.push(keccak256(abi.encodePacked(users[i])));
-            phase2MerkleTreeLeaves.push(keccak256(abi.encodePacked(users[i + 10])));
+            phase1MerkleTreeLeaves.push(keccak256(abi.encodePacked(usersPhase1[i])));
+            phase2MerkleTreeLeaves.push(keccak256(abi.encodePacked(usersPhase2[i])));
         }
         phase1MerkleRoot = merkle.getRoot(phase1MerkleTreeLeaves);
         phase2MerkleRoot = merkle.getRoot(phase2MerkleTreeLeaves);
@@ -43,7 +47,7 @@ contract MultiUtilityNFTTest is Test {
         // Deploy the contracts
         paymentToken = new PaymentToken();
         multiUtilityNFT = new MultiUtilityNFT(
-            owner,
+            ownerAddress,
             ISablierLockup(address(1)),
             paymentToken,
             DISCOUNT_PRICE,
@@ -56,14 +60,15 @@ contract MultiUtilityNFTTest is Test {
         );
 
         // Mint some tokens for the users
-        paymentToken.mint(owner, INITIAL_SUPPLY);
-        for (uint256 i = 0; i < 20; i++) {
-            paymentToken.mint(users[i], INITIAL_SUPPLY);
+        paymentToken.mint(ownerAddress, INITIAL_SUPPLY);
+        for (uint256 i = 0; i < 10; i++) {
+            paymentToken.mint(usersPhase1[i], INITIAL_SUPPLY);
+            paymentToken.mint(usersPhase2[i], INITIAL_SUPPLY);
         }
     }
 
     function testConstructorParameters() public view {
-        assertEq(multiUtilityNFT.owner(), owner);
+        assertEq(multiUtilityNFT.owner(), ownerAddress);
         assertEq(address(multiUtilityNFT.sablierLockup()), address(1));
         assertEq(address(multiUtilityNFT.paymentToken()), address(paymentToken));
         assertEq(multiUtilityNFT.discountPrice(), DISCOUNT_PRICE);
@@ -88,28 +93,26 @@ contract MultiUtilityNFTTest is Test {
     }
 
     function testMintPhase1Ok() public {
-        // Mint NFTs for the first 10 users
         for (uint256 i = 0; i < 10; i++) {
-            vm.startPrank(users[i]);
-            assert(!multiUtilityNFT.phase1Claimed(users[i]));
-            uint256 balance = multiUtilityNFT.balanceOf(users[i]);
+            vm.startPrank(usersPhase1[i]);
+            assert(!multiUtilityNFT.phase1Claimed(usersPhase1[i]));
+            uint256 balance = multiUtilityNFT.balanceOf(usersPhase1[i]);
 
             bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
             multiUtilityNFT.mintPhase1(proof);
-            assert(multiUtilityNFT.phase1Claimed(users[i]));
-            assertEq(multiUtilityNFT.balanceOf(users[i]), balance + 1);
+            assert(multiUtilityNFT.phase1Claimed(usersPhase1[i]));
+            assertEq(multiUtilityNFT.balanceOf(usersPhase1[i]), balance + 1);
             vm.stopPrank();
         }
     }
 
     function testMintPhase1AlreadyClaimed() public {
-        // Mint NFTs for the first 10 users
         for (uint256 i = 0; i < 10; i++) {
-            vm.startPrank(users[i]);
+            vm.startPrank(usersPhase1[i]);
             bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
 
             multiUtilityNFT.mintPhase1(proof);
-            assert(multiUtilityNFT.phase1Claimed(users[i]));
+            assert(multiUtilityNFT.phase1Claimed(usersPhase1[i]));
 
             vm.expectRevert(MultiUtilityNFT.AlreadyClaimed.selector);
             multiUtilityNFT.mintPhase1(proof);
@@ -118,12 +121,13 @@ contract MultiUtilityNFTTest is Test {
     }
 
     function testMintPhase1InvalidPhase() public {
-        // Mint NFTs for the first 10 users
+        // Warp to the end of the first phase
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
         for (uint256 i = 0; i < 10; i++) {
-            vm.startPrank(users[i]);
+            vm.startPrank(usersPhase1[i]);
             bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
 
-            vm.warp(block.timestamp + 1 days + 1 seconds);
             vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
             multiUtilityNFT.mintPhase1(proof);
             vm.stopPrank();
@@ -131,14 +135,120 @@ contract MultiUtilityNFTTest is Test {
     }
 
     function testMintPhase1InvalidProof() public {
-        // Mint NFTs for the first 10 users
         for (uint256 i = 0; i < 10; i++) {
-            vm.startPrank(users[i]);
+            vm.startPrank(usersPhase1[i]);
             bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
-            proof[0] = keccak256(abi.encodePacked(users[i]));
+            proof[0] = keccak256(abi.encodePacked(usersPhase1[i]));
             vm.expectRevert(MultiUtilityNFT.InvalidProof.selector);
             multiUtilityNFT.mintPhase1(proof);
             vm.stopPrank();
         }
+    }
+
+    function testMintPhase2Ok() public {
+        // Warp to the second phase
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase2[i]);
+            assert(!multiUtilityNFT.phase2Claimed(usersPhase2[i]));
+            uint256 balance = multiUtilityNFT.balanceOf(usersPhase2[i]);
+
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
+
+            bytes memory signature = generateSignature(usersPhase2[i]);
+            bytes32[] memory proof = merkle.getProof(phase2MerkleTreeLeaves, i);
+            multiUtilityNFT.mintPhase2(signature, proof);
+            assert(multiUtilityNFT.phase2Claimed(usersPhase2[i]));
+            assertEq(multiUtilityNFT.balanceOf(usersPhase2[i]), balance + 1);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase2AlreadyClaimed() public {
+        // Warp to the second phase
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        // Mint NFTs for the first 10 users
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase2[i]);
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
+            bytes memory signature = generateSignature(usersPhase2[i]);
+            bytes32[] memory proof = merkle.getProof(phase2MerkleTreeLeaves, i);
+            multiUtilityNFT.mintPhase2(signature, proof);
+
+            assert(multiUtilityNFT.phase2Claimed(usersPhase2[i]));
+
+            vm.expectRevert(MultiUtilityNFT.AlreadyClaimed.selector);
+            multiUtilityNFT.mintPhase2(signature, proof);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase2InvalidPhase() public {
+        // Warp to the end of the second phase
+        vm.warp(block.timestamp + 2 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase2[i]);
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
+            bytes memory signature = generateSignature(usersPhase2[i]);
+            bytes32[] memory proof = merkle.getProof(phase2MerkleTreeLeaves, i);
+
+            vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
+            multiUtilityNFT.mintPhase2(signature, proof);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase2InvalidProof() public {
+        // Warp to the second phase
+        vm.warp(block.timestamp + 1 days + 1 seconds);
+
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(usersPhase2[i]);
+            paymentToken.approve(address(multiUtilityNFT), multiUtilityNFT.discountPrice());
+            bytes memory signature = generateSignature(usersPhase2[i]);
+            bytes32[] memory proof = merkle.getProof(phase2MerkleTreeLeaves, i);
+            proof[0] = keccak256(abi.encodePacked(usersPhase2[i]));
+
+            vm.expectRevert(MultiUtilityNFT.InvalidProof.selector);
+            multiUtilityNFT.mintPhase2(signature, proof);
+            vm.stopPrank();
+        }
+    }
+
+    function generateSignature(address account) public view returns (bytes memory) {
+        // Generate the signature
+        bytes32 hash = keccak256(
+            abi.encode(
+                keccak256("MultiUtilityNFT(uint256 chainid, address nft, address account)"),
+                block.chainid,
+                address(multiUtilityNFT),
+                account
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator(), hash));
+
+        // Sign the digest using a private key (assumes you have a signing mechanism)
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(owner.privateKey, digest);
+
+        // Return the signature
+        return abi.encodePacked(r, s, v);
+    }
+
+    // Compute domain separator for EIP712
+    function domainSeparator() internal view returns (bytes32) {
+        bytes32 EIP712_DOMAIN_TYPEHASH =
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+        return keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH,
+                keccak256(bytes("MultiUtilityNFT")),
+                keccak256(bytes("1")),
+                block.chainid,
+                multiUtilityNFT
+            )
+        );
     }
 }
