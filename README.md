@@ -43,12 +43,52 @@ Execute the test suite using Foundry:
 forge test
 ```
 
+You can also run the tests with coverage. The project is designed to achieve **100% line coverage**, ensuring all code paths are tested:
+
+```bash
+forge coverage
+```
+
 ## Contract Design and Testing Approach
 
-The contract design follows modular principles to ensure maintainability and scalability. The `MultiUtilityNFT` contract extends ERC721 while integrating additional functionalities such as mint operations and lockup mechanisms.
+The **Insomnia Multi-Utility NFT** contract is designed with a focus on modularity, security, and efficiency. Below are the core design principles and testing methodologies employed:
 
-The testing strategy includes:
+### Phased Minting & Payment System
 
-- **Unit Tests**: Validate individual contract components.
-- **Integration Tests**: Ensure interactions between different contract modules function correctly.
-- **Fuzz Testing**: Randomized inputs to test edge cases and unexpected behaviors.
+- Implements a **three-phase minting process** with Merkle proof verification:
+  - **Phase 1:** Whitelisted users can mint for free.
+  - **Phase 2:** Selected users mint at a discounted price, requiring a valid signature.
+  - **Phase 3:** Open minting at full price for all users.
+- Uses an **ERC20 token** as the primary payment method to handle transactions securely.
+
+### Security Considerations
+
+- Prevents **signature malleability** and replay attacks using **EIP-712 structured data signing**.
+- Ensures **reentrancy protection** using best practices.
+- Validates **Merkle proofs** to prevent unauthorized mints.
+- All minting functions emit **events** for transparency and on-chain traceability.
+
+### Vesting Mechanism
+
+- Implements a **linear vesting schedule** via **Sablier**
+- Only the contract owner can withdraw vested funds, providing controlled fund management.
+
+### Gas Optimization Strategies
+
+- Utilizes **efficient storage layouts** and avoids unnecessary state changes to minimize gas costs.
+- Leverages **OpenZeppelin’s audited contracts**, ensuring robust ERC721 and ERC20 implementations.
+- Applies **unchecked arithmetic** where safe to reduce unnecessary gas overhead.
+
+### Testing Strategy
+
+- **100% test coverage** is achieved by employing the **Branching Tree Technique (BTT)**.
+- **Unit tests** validate individual contract components, ensuring correctness.
+- **Integration tests** verify interactions between minting, payments, and vesting logic.
+
+### Solidity & External Libraries
+
+- The contract is built using **Solidity 0.8.26**, ensuring overflow protection without requiring additional SafeMath libraries.
+- **Tagged releases** of OpenZeppelin libraries are used for stability and security.
+- Security analysis is enhanced through **Slither** and other auditing tools.
+
+By following these principles, the **Insomnia Multi-Utility NFT** contract ensures security, efficiency, and a seamless user experience. 🚀
