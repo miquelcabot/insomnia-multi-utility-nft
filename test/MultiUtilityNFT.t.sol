@@ -6,6 +6,7 @@ import {MultiUtilityNFT} from "../src/MultiUtilityNFT.sol";
 import {PaymentToken} from "../src/PaymentToken.sol";
 import {CompleteMerkle} from "@dmfxyz/murky/src/CompleteMerkle.sol";
 import {ISablierLockup} from "@sablier/lockup/src/interfaces/ISablierLockup.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract MultiUtilityNFTTest is Test {
     uint256 public constant DISCOUNT_PRICE = 1 ether;
@@ -86,13 +87,58 @@ contract MultiUtilityNFTTest is Test {
         assert(multiUtilityNFT.getCurrentPhase() == MultiUtilityNFT.Phase.Finished);
     }
 
-    function testMintPhase1() public {
+    function testMintPhase1Ok() public {
         // Mint NFTs for the first 10 users
         for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(users[i]);
             assert(!multiUtilityNFT.phase1Claimed(users[i]));
-            vm.prank(users[i]);
-            multiUtilityNFT.mintPhase1(merkle.getProof(phase1MerkleTreeLeaves, i));
+            uint256 balance = multiUtilityNFT.balanceOf(users[i]);
+
+            bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
+            multiUtilityNFT.mintPhase1(proof);
             assert(multiUtilityNFT.phase1Claimed(users[i]));
+            assertEq(multiUtilityNFT.balanceOf(users[i]), balance + 1);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase1AlreadyClaimed() public {
+        // Mint NFTs for the first 10 users
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(users[i]);
+            bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
+
+            multiUtilityNFT.mintPhase1(proof);
+            assert(multiUtilityNFT.phase1Claimed(users[i]));
+
+            vm.expectRevert(MultiUtilityNFT.AlreadyClaimed.selector);
+            multiUtilityNFT.mintPhase1(proof);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase1InvalidPhase() public {
+        // Mint NFTs for the first 10 users
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(users[i]);
+            bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
+
+            vm.warp(block.timestamp + 1 days + 1 seconds);
+            vm.expectRevert(MultiUtilityNFT.InvalidPhase.selector);
+            multiUtilityNFT.mintPhase1(proof);
+            vm.stopPrank();
+        }
+    }
+
+    function testMintPhase1InvalidProof() public {
+        // Mint NFTs for the first 10 users
+        for (uint256 i = 0; i < 10; i++) {
+            vm.startPrank(users[i]);
+            bytes32[] memory proof = merkle.getProof(phase1MerkleTreeLeaves, i);
+            proof[0] = keccak256(abi.encodePacked(users[i]));
+            vm.expectRevert(MultiUtilityNFT.InvalidProof.selector);
+            multiUtilityNFT.mintPhase1(proof);
+            vm.stopPrank();
         }
     }
 }
